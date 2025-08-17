@@ -18,7 +18,8 @@ export default function RootLayout({ children }) {
         <MantineProvider>
           <nav style={{ padding: '1rem', borderBottom: '1px solid #ddd', marginBottom: '1rem', backgroundColor: '#fff' }}>
             <Link href="/" style={{ marginRight: '1rem', textDecoration: 'none', color: 'blue' }}>Inventory</Link>
-            <Link href="/pos" style={{ textDecoration: 'none', color: 'blue' }}>Point of Sale</Link>
+            <Link href="/pos" style={{ marginRight: '1rem', textDecoration: 'none', color: 'blue' }}>Point of Sale</Link>
+            <Link href="/sales" style={{ textDecoration: 'none', color: 'blue' }}>Sales</Link> {/* <-- ADD THIS LINK */}
           </nav>
           <main style={{ padding: '0 2rem' }}>
             {children}
