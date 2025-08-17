@@ -2,20 +2,30 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Title, Grid, Table, Button, Paper, ScrollArea, List, Text, ThemeIcon, TextInput, Box } from '@mantine/core';
-import { IconCircleCheck, IconShoppingCart, IconSearch } from '@tabler/icons-react';
+import { Title, Grid, Table, Button, Paper, ScrollArea, List, Text, ThemeIcon, Group, ActionIcon, Box, TextInput } from '@mantine/core';
+import { IconCircleCheck, IconShoppingCart, IconPlus, IconMinus, IconX, IconSearch } from '@tabler/icons-react';
 
 export default function PosClientView({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts);
   const [cart, setCart] = useState([]);
   const router = useRouter();
   const [message, setMessage] = useState('');
-
-  // 1. NEW STATE FOR THE SEARCH QUERY
   const [searchQuery, setSearchQuery] = useState('');
 
+  // This function fetches the latest product list from the backend
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products');
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      setProducts(data); // Directly update our product list state
+    } catch (error) {
+      console.error("Failed to re-fetch products:", error);
+      setMessage("Error: Could not refresh product list.");
+    }
+  };
+
   const handleAddToCart = (productToAdd) => {
-    // ... (this function is unchanged)
     const existingItem = cart.find(item => item.id === productToAdd.id);
     const currentQuantityInCart = existingItem ? existingItem.quantity : 0;
     if (currentQuantityInCart >= productToAdd.stock_quantity) {
@@ -23,16 +33,46 @@ export default function PosClientView({ initialProducts }) {
       return;
     }
     if (existingItem) {
-      setCart(cart.map(item => item.id === productToAdd.id ? { ...item, quantity: item.quantity + 1 } : item));
+      handleIncreaseQuantity(productToAdd.id);
     } else {
       setCart([...cart, { ...productToAdd, quantity: 1 }]);
+    }
+  };
+
+  const handleRemoveItem = (itemIdToRemove) => {
+    setCart(cart.filter(item => item.id !== itemIdToRemove));
+  };
+
+  const handleIncreaseQuantity = (itemIdToIncrease) => {
+    const itemInCart = cart.find(item => item.id === itemIdToIncrease);
+    const productInStock = products.find(p => p.id === itemIdToIncrease);
+    if (itemInCart && productInStock && itemInCart.quantity < productInStock.stock_quantity) {
+      setCart(cart.map(cartItem =>
+        cartItem.id === itemIdToIncrease
+          ? { ...cartItem, quantity: cartItem.quantity + 1 }
+          : cartItem
+      ));
+    } else {
+      alert(`Stock limit for "${itemInCart.name}" reached!`);
+    }
+  };
+
+  const handleDecreaseQuantity = (itemIdToDecrease) => {
+    const existingItem = cart.find(item => item.id === itemIdToDecrease);
+    if (existingItem.quantity === 1) {
+      handleRemoveItem(itemIdToDecrease);
+    } else {
+      setCart(cart.map(item =>
+        item.id === itemIdToDecrease
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      ));
     }
   };
 
   const cartTotal = cart.reduce((total, item) => total + (parseFloat(item.price) * item.quantity), 0);
 
   const handleCheckout = async () => {
-    // ... (this function is unchanged)
     if (cart.length === 0) return;
     setMessage('Processing sale...');
     try {
@@ -43,16 +83,18 @@ export default function PosClientView({ initialProducts }) {
       });
       const result = await response.json();
       if (!response.ok) { throw new Error(result.details || 'Checkout failed'); }
+      
       setMessage(`Sale successful! Sale ID: ${result.saleId}`);
-      setCart([]);
-      router.refresh();
+      setCart([]); 
+      
+      await fetchProducts(); 
+      
     } catch (error) {
       setMessage(`Error during checkout: ${error.message}`);
+      console.error('Checkout error:', error);
     }
   };
 
-  // 2. NEW FILTERING LOGIC
-  // This creates a new list of products based on the search query
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.sku.toLowerCase().includes(searchQuery.toLowerCase())
@@ -65,8 +107,6 @@ export default function PosClientView({ initialProducts }) {
         <Grid.Col span={8}>
           <Paper shadow="xs" p="md" withBorder>
             <Title order={2} mb="md">Products</Title>
-
-            {/* 3. NEW SEARCH INPUT FIELD */}
             <Box mb="md">
               <TextInput
                 placeholder="Search by name or SKU..."
@@ -75,14 +115,17 @@ export default function PosClientView({ initialProducts }) {
                 onChange={(event) => setSearchQuery(event.currentTarget.value)}
               />
             </Box>
-
             <ScrollArea h={550}>
               <Table striped highlightOnHover>
                 <Table.Thead>
-                  <Table.Tr><Table.Th>Name</Table.Th><Table.Th>Price</Table.Th><Table.Th>Stock</Table.Th><Table.Th>Action</Table.Th></Table.Tr>
+                  <Table.Tr>
+                    <Table.Th>Name</Table.Th>
+                    <Table.Th>Price</Table.Th>
+                    <Table.Th>Stock</Table.Th>
+                    <Table.Th>Action</Table.Th>
+                  </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {/* 4. USE THE FILTERED LIST TO RENDER THE TABLE */}
                   {filteredProducts.map((product) => (
                     <Table.Tr key={product.id}>
                       <Table.Td>{product.name}</Table.Td>
@@ -101,15 +144,22 @@ export default function PosClientView({ initialProducts }) {
           </Paper>
         </Grid.Col>
         <Grid.Col span={4}>
-          {/* The Cart section is unchanged */}
           <Paper shadow="xs" p="md" withBorder>
             <Title order={2} mb="md">Cart</Title>
             {cart.length === 0 ? <Text>Cart is empty</Text> : (
               <>
-                <List spacing="xs" size="sm" center>
+                <List spacing="xs" size="sm">
                   {cart.map(item => (
-                    <List.Item key={item.id} icon={<ThemeIcon color="teal" size={24} radius="xl"><IconCircleCheck size={16} /></ThemeIcon>}>
-                      {item.name} - ${parseFloat(item.price).toFixed(2)} x {item.quantity}
+                    <List.Item key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <div>
+                        <Text size="sm">{item.name}</Text>
+                        <Text size="xs" c="dimmed">${parseFloat(item.price).toFixed(2)} x {item.quantity}</Text>
+                      </div>
+                      <Group gap="xs">
+                        <ActionIcon size="sm" variant="outline" onClick={() => handleDecreaseQuantity(item.id)}><IconMinus size={14} /></ActionIcon>
+                        <ActionIcon size="sm" variant="outline" onClick={() => handleIncreaseQuantity(item.id)}><IconPlus size={14} /></ActionIcon>
+                        <ActionIcon size="sm" color="red" variant="outline" onClick={() => handleRemoveItem(item.id)}><IconX size={14} /></ActionIcon>
+                      </Group>
                     </List.Item>
                   ))}
                 </List>
