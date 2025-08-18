@@ -32,3 +32,26 @@ export async function PUT(request, { params }) {
     return NextResponse.json({ error: 'Server error while updating product' }, { status: 500 });
   }
 }
+
+// --- DELETE FUNCTION ---
+// This function now handles "soft deleting" by archiving
+export async function DELETE(request, { params }) {
+  try {
+    const { id } = params;
+
+    const archiveResult = await pool.query(
+      'UPDATE products SET is_archived = true WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (archiveResult.rowCount === 0) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(archiveResult.rows[0]);
+
+  } catch (error) {
+    console.error('Archive Product Error:', error);
+    return NextResponse.json({ error: 'Server error while archiving product' }, { status: 500 });
+  }
+}

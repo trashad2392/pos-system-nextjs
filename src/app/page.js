@@ -3,9 +3,10 @@ import InventoryClientView from '@/components/InventoryClientView';
 
 async function getProducts() {
   try {
-    const result = await pool.query('SELECT * FROM products ORDER BY id ASC');
+    const result = await pool.query('SELECT * FROM products WHERE is_archived = false ORDER BY id ASC');
     return result.rows;
   } catch (error) {
+    console.error('Failed to fetch products:', error);
     return [];
   }
 }
