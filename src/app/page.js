@@ -12,6 +12,5 @@ async function getProducts() {
 
 export default async function InventoryPage() {
   const products = await getProducts();
-
   return <InventoryClientView initialProducts={products} />;
 }

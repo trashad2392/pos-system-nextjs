@@ -1,10 +1,13 @@
-'use client'; 
+'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+// We no longer need the router here
+// import { useRouter } from 'next/navigation';
+import { Button, TextInput, NumberInput, Group, Text } from '@mantine/core';
 
-export default function AddProductForm() {
-  const router = useRouter();
+
+// It now accepts 'onProductAdded' as a prop
+export default function AddProductForm({ onProductAdded }) {
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [price, setPrice] = useState('');
@@ -25,13 +28,15 @@ export default function AddProductForm() {
       const result = await response.json();
       if (!response.ok) { throw new Error(result.error || 'Failed to add product'); }
 
-      setMessage(`Successfully added: ${result.name}`);
-      setName('');
-      setSku('');
-      setPrice('');
-      setStockQuantity('');
+      setMessage(`Success! Added: ${result.name}`);
+      setName(''); setSku(''); setPrice(''); setStockQuantity('');
 
-      router.refresh(); 
+      // --- THIS IS THE FIX ---
+      // Instead of router.refresh(), we call the function our parent gave us
+      if (onProductAdded) {
+        onProductAdded();
+      }
+      // -----------------------
 
     } catch (error) {
       setMessage(`Error: ${error.message}`);
@@ -42,13 +47,40 @@ export default function AddProductForm() {
     <div>
       <h2>Add a New Product</h2>
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '0.5rem' }}><label>Name: </label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></div>
-        <div style={{ marginBottom: '0.5rem' }}><label>SKU: </label><input type="text" value={sku} onChange={(e) => setSku(e.target.value)} required /></div>
-        <div style={{ marginBottom: '0.5rem' }}><label>Price: </label><input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} required /></div>
-        <div style={{ marginBottom: '0.5rem' }}><label>Stock Quantity: </label><input type="number" step="1" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} required /></div>
-        <button type="submit">Add Product</button>
+        <TextInput
+          label="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          mb="sm"
+        />
+        <TextInput
+          label="SKU"
+          value={sku}
+          onChange={(e) => setSku(e.target.value)}
+          required
+          mb="sm"
+        />
+        <NumberInput
+          label="Price"
+          value={price}
+          onChange={setPrice}
+          required
+          mb="sm"
+          precision={2}
+          step={0.01}
+        />
+        <NumberInput
+          label="Stock Quantity"
+          value={stockQuantity}
+          onChange={setStockQuantity}
+          required
+          mb="sm"
+          allowDecimal={false}
+        />
+        <Button type="submit">Add Product</Button>
       </form>
-      {message && <p>{message}</p>}
+      {message && <Text mt="sm" c={message.startsWith('Error') ? 'red' : 'green'}>{message}</Text>}
     </div>
   );
 }
