@@ -1,15 +1,8 @@
-import pool from '@/lib/db';
+import { getProducts } from '@/lib/data';
 import InventoryClientView from '@/components/InventoryClientView';
 
-async function getProducts() {
-  try {
-    const result = await pool.query('SELECT * FROM products WHERE is_archived = false ORDER BY id ASC');
-    return result.rows;
-  } catch (error) {
-    console.error('Failed to fetch products:', error);
-    return [];
-  }
-}
+// This line forces the page to always be rendered dynamically
+export const dynamic = 'force-dynamic';
 
 export default async function InventoryPage() {
   const products = await getProducts();
