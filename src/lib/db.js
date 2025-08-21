@@ -1,11 +1,6 @@
-import { Pool } from 'pg';
-
-let pool;
-
-if (!pool) {
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
-}
-
-export default pool;
+import { PrismaClient } from '@prisma/client';
+const prismaClientSingleton = () => new PrismaClient();
+const globalForPrisma = globalThis;
+const db = globalForPrisma.prisma ?? prismaClientSingleton();
+export default db;
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db;
