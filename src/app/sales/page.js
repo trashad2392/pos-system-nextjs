@@ -1,16 +1,26 @@
 // src/app/sales/page.js
+"use client";
 
-import { getSales } from '@/lib/data';
+import { useState, useEffect } from 'react';
 import { Title, Paper } from '@mantine/core';
-import SalesTable from '@/components/SalesTable'; // Import our new client component
+import SalesTable from '@/components/SalesTable';
 
-export const dynamic = 'force-dynamic';
+export default function SalesPage() {
+  const [sales, setSales] = useState([]);
 
-export default async function SalesPage() {
-  // 1. This page remains a fast Server Component for fetching data.
-  const sales = await getSales();
+  useEffect(() => {
+    // This function runs when the component loads, fetching sales via Electron's API
+    const fetchSales = async () => {
+      try {
+        const data = await window.api.getSales();
+        setSales(data);
+      } catch (error) {
+        console.error("Failed to fetch sales:", error);
+      }
+    };
+    fetchSales();
+  }, []); // The empty array means this runs once on mount
 
-  // 2. We then pass that data down to the Client Component for rendering.
   return (
     <Paper shadow="xs" p="md" withBorder>
       <Title order={1} mb="xl">Sales Report</Title>
